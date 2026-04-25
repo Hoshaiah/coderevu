@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1.7
+FROM node:22-alpine
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
+
+# Install deps first so they cache across source edits.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+COPY . .
+
+ENV NODE_ENV=development \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+EXPOSE 3000
+CMD ["pnpm", "dev", "--hostname", "0.0.0.0"]

@@ -1,26 +1,206 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ----------------------------------------------------------------------- */
+/* LeetCode-patterned dark theme. Utilitarian gray surfaces, green accent, */
+/* difficulty pill colors borrowed from LeetCode's conventions so users    */
+/* feel at home immediately. Sans-only, JetBrains Mono for code.           */
+/* ----------------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-rule: var(--rule);
+
+  --color-brand: var(--brand);
+  --color-easy: var(--easy);
+  --color-medium: var(--medium);
+  --color-hard: var(--hard);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 1);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 3);
+  --radius-3xl: calc(var(--radius) * 4);
+  --radius-4xl: calc(var(--radius) * 5);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* surfaces */
+  --surface: #1a1a1a;     /* page bg */
+  --surface-2: #262626;   /* elevated card */
+  --surface-3: #303030;   /* hover / more elevated */
+  --fg: #f5f5f5;          /* primary text */
+  --fg-2: #b3b3b3;        /* secondary text */
+  --fg-3: #7a7a7a;        /* tertiary / muted */
+  --rule: #333333;        /* border */
+
+  /* brand + difficulty (LeetCode conventions) */
+  --brand: #22c55e;       /* primary accent (green) */
+  --easy: #22c55e;
+  --medium: #eab308;
+  --hard: #ef4444;
+
+  /* shadcn mappings */
+  --background: var(--surface);
+  --foreground: var(--fg);
+  --card: var(--surface-2);
+  --card-foreground: var(--fg);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--fg);
+  --primary: var(--brand);
+  --primary-foreground: #0a0a0a;
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--fg);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--fg-3);
+  --accent: var(--surface-3);
+  --accent-foreground: var(--fg);
+  --destructive: var(--hard);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --chart-2: var(--medium);
+  --chart-3: var(--hard);
+  --chart-4: #60a5fa;
+  --chart-5: #a78bfa;
+  --radius: 0.375rem;
+
+  --sidebar: var(--surface-2);
+  --sidebar-foreground: var(--fg);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: var(--surface-3);
+  --sidebar-accent-foreground: var(--fg);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--brand);
+}
+
+.dark {
+  --surface: #1a1a1a;
+  --surface-2: #262626;
+  --surface-3: #303030;
+  --fg: #f5f5f5;
+  --fg-2: #b3b3b3;
+  --fg-3: #7a7a7a;
+  --rule: #333333;
+  --brand: #22c55e;
+  --easy: #22c55e;
+  --medium: #eab308;
+  --hard: #ef4444;
+  --background: var(--surface);
+  --foreground: var(--fg);
+  --card: var(--surface-2);
+  --card-foreground: var(--fg);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--fg);
+  --primary: var(--brand);
+  --primary-foreground: #0a0a0a;
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--fg);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--fg-3);
+  --accent: var(--surface-3);
+  --accent-foreground: var(--fg);
+  --destructive: var(--hard);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--brand);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans);
+    color-scheme: dark;
+    background: var(--surface);
+    color: var(--fg);
+  }
+  body {
+    background: var(--surface);
+    min-height: 100vh;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--brand) 35%, transparent);
+    color: var(--fg);
+  }
+  /* thin dark scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3) transparent;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─── utilities ─── */
+@utility pill-easy {
+  background: color-mix(in oklab, var(--easy) 15%, transparent);
+  color: var(--easy);
+  border: 1px solid color-mix(in oklab, var(--easy) 25%, transparent);
+}
+@utility pill-medium {
+  background: color-mix(in oklab, var(--medium) 15%, transparent);
+  color: var(--medium);
+  border: 1px solid color-mix(in oklab, var(--medium) 25%, transparent);
+}
+@utility pill-hard {
+  background: color-mix(in oklab, var(--hard) 15%, transparent);
+  color: var(--hard);
+  border: 1px solid color-mix(in oklab, var(--hard) 25%, transparent);
+}
+@utility meter-track {
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 6px;
+}
+@utility meter-fill-brand {
+  background: var(--brand);
+  height: 100%;
 }

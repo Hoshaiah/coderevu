@@ -6,21 +6,46 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx scripts/seed-problems.ts",
+    "generate": "tsx scripts/generate-problems.ts",
+    "regen-solutions": "tsx scripts/regen-solutions.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@base-ui/react": "^1.4.1",
+    "@monaco-editor/react": "^4.7.0",
+    "@shikijs/monaco": "^4.0.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "firebase": "^12.12.1",
+    "firebase-admin": "^13.8.0",
+    "gray-matter": "^4.0.3",
+    "lucide-react": "^1.8.0",
     "next": "16.2.4",
+    "next-themes": "^0.4.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^2.1.9",
+    "remark-gfm": "^4.0.1",
+    "shadcn": "^4.4.0",
+    "shiki": "^4.0.2",
+    "sonner": "^2.0.7",
+    "stripe": "^22.0.2",
+    "tailwind-merge": "^3.5.0",
+    "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

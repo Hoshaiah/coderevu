@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: coderevu-app
+    env_file:
+      - .env.local
+    environment:
+      # Monaco's bundles push Turbopack past the default 4GB heap and trigger
+      # "approaching memory threshold" auto-restarts mid-request. Give node
+      # more headroom in dev.
+      NODE_OPTIONS: "--max-old-space-size=8192"
+    ports:
+      # Host 3001 -> container 3000 (3000 is taken on the host by another
+      # project). If you use the app in a browser, set NEXT_PUBLIC_APP_URL
+      # in .env.local to http://localhost:3001 so Stripe redirects match.
+      - "3001:3000"
+    volumes:
+      # Live source for hot reload. This also exposes ./service-account.json
+      # if present, which lib/firebase/admin.ts picks up from cwd.
+      - .:/app
+      # Keep container-installed node_modules and .next separate from the host
+      # so alpine-compiled binaries don't collide with the mac host.
+      - coderevu_node_modules:/app/node_modules
+      - coderevu_next:/app/.next
+    restart: unless-stopped
+
+  # Forwards live Stripe events from your test-mode account to the app's
+  # webhook route. Uses STRIPE_SECRET_KEY from .env.local — no `stripe login`
+  # is required.
+  #
+  # On first startup this prints a line like:
+  #   > Ready! Your webhook signing secret is whsec_xxxxxxxx (^C to quit)
+  # Copy that whsec_ into STRIPE_WEBHOOK_SECRET in .env.local, then restart
+  # the app: `docker compose restart app`.
+  stripe:
+    image: stripe/stripe-cli:latest
+    container_name: coderevu-stripe
+    depends_on:
+      - app
+    env_file:
+      - .env.local
+    environment:
+      STRIPE_CLI_TELEMETRY_OPTOUT: "1"
+    # Use sh -c so $STRIPE_SECRET_KEY is expanded inside the container (from
+    # env_file), not by docker compose at parse time (which only reads ./.env).
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        stripe listen
+        --api-key "$$STRIPE_SECRET_KEY"
+        --forward-to http://app:3000/api/stripe/webhook
+        --events checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,invoice.payment_failed
+    restart: unless-stopped
+
+volumes:
+  coderevu_node_modules:
+  coderevu_next:

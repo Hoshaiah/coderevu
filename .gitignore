@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# Firebase service account (NEVER commit)
+service-account.json
+*-firebase-adminsdk-*.json
 
 # vercel
 .vercel
