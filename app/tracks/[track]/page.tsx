@@ -6,6 +6,7 @@ import { listTrackProblems, problemId as makeProblemId } from "@/lib/db/problems
 import { listProgressBySlugs } from "@/lib/db/progress";
 import { isTrackId, normalizeProgressStatus, TRACK_META } from "@/lib/db/types";
 import type { Difficulty, ProblemDoc } from "@/lib/db/types";
+import { TrackPrefs } from "@/components/track-prefs";
 
 export default async function TrackPage(
   props: PageProps<"/tracks/[track]">,
@@ -118,13 +119,16 @@ export default async function TrackPage(
           </div>
         </div>
 
-        {/* right — difficulty tally */}
+        {/* right — difficulty tally + list prefs */}
         {total > 0 && (
-          <div className="grid grid-cols-4 gap-3 min-w-[320px]">
-            <Tally n={total} label="Total" />
-            <Tally n={counts.easy} label="Easy" tone="easy" />
-            <Tally n={counts.medium} label="Med" tone="medium" />
-            <Tally n={counts.hard} label="Hard" tone="hard" />
+          <div className="flex flex-col items-end gap-3">
+            <TrackPrefs />
+            <div className="grid grid-cols-4 gap-3 min-w-[320px]">
+              <Tally n={total} label="Total" />
+              <Tally n={counts.easy} label="Easy" tone="easy" />
+              <Tally n={counts.medium} label="Med" tone="medium" />
+              <Tally n={counts.hard} label="Hard" tone="hard" />
+            </div>
           </div>
         )}
       </header>
@@ -174,6 +178,8 @@ export default async function TrackPage(
               <Link
                 key={p.slug}
                 href={`/tracks/${track}/${p.slug}`}
+                data-problem-row=""
+                data-status={status}
                 className="group grid grid-cols-[52px_1fr] md:grid-cols-[52px_112px_1fr_auto_84px] items-center gap-4 px-4 py-3.5 border-b border-rule last:border-b-0 transition hover:bg-surface-3/50"
               >
                 <span className="text-[12px] font-mono text-fg-3 tabular-nums">
@@ -303,7 +309,7 @@ function StatusPill({
 function TagRow({ tags }: { tags: string[] }) {
   if (tags.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div data-tag-row="" className="flex flex-wrap gap-1.5">
       {tags.map((t) => (
         <span
           key={t}
