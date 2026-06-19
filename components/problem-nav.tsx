@@ -145,7 +145,7 @@ export function ProblemNav({
             {currentIndex >= 0 ? `${currentIndex + 1} / ${problems.length}` : ""}
           </span>
         </DialogTrigger>
-        <DialogContent className="max-w-[640px] max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[820px] max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span
@@ -179,27 +179,15 @@ export function ProblemNav({
                         <Link
                           href={`/tracks/${track}/${p.slug}`}
                           onClick={() => setListOpen(false)}
-                          className={`flex items-start gap-3 px-3 py-2.5 text-[13px] transition ${
+                          className={`flex items-center gap-3 px-3 py-2 text-[13px] transition ${
                             active
                               ? "bg-brand/10 text-fg"
                               : "text-fg-2 hover:bg-surface-3/60 hover:text-fg"
                           }`}
                         >
-                          <DifficultyDot d={p.difficulty} className="mt-1.5" />
-                          <span className="flex-1 min-w-0">
-                            <span className="block truncate font-medium">{p.title}</span>
-                            {p.tags.length > 0 && (
-                              <span className="mt-1 flex flex-wrap gap-1">
-                                {p.tags.slice(0, 4).map((t) => (
-                                  <span
-                                    key={t}
-                                    className="inline-flex h-[18px] items-center px-1.5 rounded-md border border-rule bg-surface-2 text-[10px] font-mono text-fg-3"
-                                  >
-                                    {t}
-                                  </span>
-                                ))}
-                              </span>
-                            )}
+                          <DifficultyDot d={p.difficulty} />
+                          <span className="flex-1 min-w-0 truncate font-medium">
+                            {p.title}
                           </span>
                         </Link>
                       </li>
