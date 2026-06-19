@@ -3,7 +3,7 @@ import Link from "next/link";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-rule bg-surface/95 backdrop-blur">
-      <div className="flex h-14 items-center justify-between gap-6 pl-3 pr-6">
+      <div className="flex h-14 items-center justify-between gap-6 pl-5 pr-6">
         {/* left — logo + primary nav */}
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
