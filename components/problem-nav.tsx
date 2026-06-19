@@ -18,6 +18,7 @@ export type NavProblem = {
   title: string;
   difficulty: "easy" | "medium" | "hard";
   tags: string[];
+  status: "todo" | "in-progress" | "complete";
 };
 
 const CATEGORY_LABEL_OVERRIDES: Record<string, string> = {
@@ -128,8 +129,8 @@ export function ProblemNav({
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 h-11 px-3 border-b border-rule bg-surface-2">
-      {/* Left: track label, clickable, opens problem-list modal */}
+    <div className="flex items-center gap-2 h-11 px-3 border-b border-rule bg-surface-2">
+      {/* Track label, clickable, opens problem-list modal */}
       <Dialog open={listOpen} onOpenChange={setListOpen}>
         <DialogTrigger
           className="inline-flex items-center gap-2 h-8 px-2 -mx-2 rounded-md text-[13px] font-medium text-fg hover:bg-surface-3/60 transition"
@@ -189,6 +190,7 @@ export function ProblemNav({
                           <span className="flex-1 min-w-0 truncate font-medium">
                             {p.title}
                           </span>
+                          <StatusPill status={p.status} />
                         </Link>
                       </li>
                     );
@@ -200,7 +202,8 @@ export function ProblemNav({
         </DialogContent>
       </Dialog>
 
-      {/* Right: tag toggle + prev/next/shuffle */}
+      {/* Beside the track label: tag toggle + prev/shuffle/next */}
+      <span className="mx-1 h-5 w-px bg-rule shrink-0" aria-hidden />
       <div className="flex items-center gap-1">
         <NavBtn
           onClick={toggleTags}
@@ -209,7 +212,6 @@ export function ProblemNav({
         >
           {showTags ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
         </NavBtn>
-        <span className="mx-1 h-5 w-px bg-rule" aria-hidden />
         {prev ? (
           <Link
             href={`/tracks/${track}/${prev.slug}`}
@@ -284,5 +286,45 @@ function DifficultyDot({
       className={`size-2 rounded-full shrink-0 ${cls} ${className}`}
       aria-hidden
     />
+  );
+}
+
+function StatusPill({
+  status,
+}: {
+  status: "todo" | "in-progress" | "complete";
+}) {
+  if (status === "todo") {
+    return (
+      <span
+        className="text-[10px] uppercase tracking-wider text-fg-3/60 shrink-0"
+        aria-label="To do"
+      >
+        ·
+      </span>
+    );
+  }
+  const cfg =
+    status === "complete"
+      ? {
+          label: "Done",
+          srLabel: "Complete",
+          cls: "bg-brand/15 text-brand border-brand/40",
+          dot: "bg-brand",
+        }
+      : {
+          label: "WIP",
+          srLabel: "In progress",
+          cls: "bg-medium/15 text-medium border-medium/30",
+          dot: "bg-medium animate-pulse",
+        };
+  return (
+    <span
+      aria-label={cfg.srLabel}
+      className={`inline-flex items-center gap-1 h-[20px] px-1.5 rounded-md border text-[10px] font-medium shrink-0 ${cfg.cls}`}
+    >
+      <span className={`size-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
   );
 }

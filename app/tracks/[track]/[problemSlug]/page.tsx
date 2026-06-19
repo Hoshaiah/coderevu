@@ -5,7 +5,7 @@ import {
   listTrackProblems,
   problemId as makeProblemId,
 } from "@/lib/db/problems";
-import { getProgress } from "@/lib/db/progress";
+import { getProgress, listProgressBySlugs } from "@/lib/db/progress";
 import { getConversation } from "@/lib/db/conversations";
 import {
   isTrackId,
@@ -30,21 +30,30 @@ export default async function ProblemPage(
   const conversation = await getConversation(sessionId, id);
 
   // For the in-workspace nav (prev / next / shuffle / list modal).
-  // Sort to match the order shown on the track page.
+  // Sort to match the order shown on the track page, and attach each
+  // problem's current progress status so the modal can flag complete /
+  // in-progress items.
   const difficultyRank = { easy: 0, medium: 1, hard: 2 } as const;
-  const navProblems = listTrackProblems(track)
+  const sortedTrackProblems = listTrackProblems(track)
     .slice()
     .sort(
       (a, b) =>
         difficultyRank[a.difficulty] - difficultyRank[b.difficulty] ||
         a.orderIndex - b.orderIndex,
-    )
-    .map((p) => ({
-      slug: p.slug,
-      title: p.title,
-      difficulty: p.difficulty,
-      tags: p.tags,
-    }));
+    );
+  const navProgress = await listProgressBySlugs(
+    sessionId,
+    sortedTrackProblems.map((p) => makeProblemId(track, p.slug)),
+  );
+  const navProblems = sortedTrackProblems.map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    difficulty: p.difficulty,
+    tags: p.tags,
+    status: normalizeProgressStatus(
+      navProgress[makeProblemId(track, p.slug)]?.status,
+    ),
+  }));
 
   return (
     <ProblemWorkspace
