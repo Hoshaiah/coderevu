@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Shuffle, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
@@ -122,9 +123,16 @@ export function ProblemNav({
   }
 
   function shuffle() {
-    const others = problems.filter((p) => p.slug !== currentSlug);
-    if (others.length === 0) return;
-    const pick = others[Math.floor(Math.random() * others.length)];
+    // Skip completed problems — shuffle should only land on something
+    // worth practicing (todo or in-progress).
+    const eligible = problems.filter(
+      (p) => p.slug !== currentSlug && p.status !== "complete",
+    );
+    if (eligible.length === 0) {
+      toast.info("Nothing left to shuffle to — every other problem is complete.");
+      return;
+    }
+    const pick = eligible[Math.floor(Math.random() * eligible.length)];
     router.push(`/tracks/${track}/${pick.slug}`);
   }
 
