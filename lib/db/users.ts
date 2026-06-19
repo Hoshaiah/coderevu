@@ -1,12 +1,6 @@
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import { DEFAULT_AI_CAP_USD, type TrackId, type UserDoc } from "@/lib/db/types";
-
-function startOfCurrentUtcMonth(): Timestamp {
-  const now = new Date();
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
-  return Timestamp.fromDate(d);
-}
+import { type TrackId, type UserDoc } from "@/lib/db/types";
 
 export async function ensureUserDoc(input: {
   uid: string;
@@ -30,18 +24,6 @@ export async function ensureUserDoc(input: {
     photoURL: input.photoURL,
     primaryTrack: null,
     createdAt: Timestamp.now(),
-    subscription: {
-      status: "none",
-      plan: null,
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      currentPeriodEnd: null,
-    },
-    aiUsage: {
-      periodStart: startOfCurrentUtcMonth(),
-      spentUsd: 0,
-      capUsd: DEFAULT_AI_CAP_USD,
-    },
   };
   await ref.set(doc);
 }
@@ -65,28 +47,4 @@ export async function getUserDoc(uid: string): Promise<UserDoc | null> {
 
 export async function setPrimaryTrack(uid: string, track: TrackId): Promise<void> {
   await adminDb().collection("users").doc(uid).update({ primaryTrack: track });
-}
-
-export function isSubscriptionActive(user: UserDoc): boolean {
-  return user.subscription.status === "active" || user.subscription.status === "past_due";
-}
-
-export async function rolloverAiUsageIfNeeded(uid: string, user: UserDoc): Promise<UserDoc> {
-  const currentPeriod = startOfCurrentUtcMonth();
-  if (user.aiUsage.periodStart.toMillis() >= currentPeriod.toMillis()) return user;
-  await adminDb().collection("users").doc(uid).update({
-    "aiUsage.periodStart": currentPeriod,
-    "aiUsage.spentUsd": 0,
-  });
-  return {
-    ...user,
-    aiUsage: { ...user.aiUsage, periodStart: currentPeriod, spentUsd: 0 },
-  };
-}
-
-export async function incrementAiSpend(uid: string, deltaUsd: number): Promise<void> {
-  await adminDb()
-    .collection("users")
-    .doc(uid)
-    .update({ "aiUsage.spentUsd": FieldValue.increment(deltaUsd) });
 }

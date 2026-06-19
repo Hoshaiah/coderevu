@@ -9,9 +9,7 @@ export default async function OnboardingPage() {
   const session = await getSessionUser();
   if (!session) redirect("/");
   const user = await getUserDoc(session.uid);
-  const paid =
-    user?.subscription.status === "active" || user?.subscription.status === "past_due";
-  if (user?.primaryTrack && !paid) {
+  if (user?.primaryTrack) {
     redirect(`/tracks/${user.primaryTrack}`);
   }
 
@@ -20,7 +18,7 @@ export default async function OnboardingPage() {
       <div className="mb-10 text-center">
         <h1 className="text-3xl font-semibold tracking-tight">Pick your primary track</h1>
         <p className="text-muted-foreground mt-3">
-          Free tier gets 10 problems in one track. You can upgrade later to unlock them all.
+          Choose the language you want to focus on first. You can switch any time.
         </p>
       </div>
 

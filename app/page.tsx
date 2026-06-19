@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TRACK_IDS, TRACK_META } from "@/lib/db/types";
-import { PricingCards } from "@/components/pricing-cards";
 
 export default function Home() {
   return (
@@ -12,7 +11,7 @@ export default function Home() {
           <div className="flex flex-col">
             <div className="inline-flex self-start items-center gap-2 rounded-full border border-rule bg-surface-2 px-3 py-1 text-[12px] text-fg-2 mb-6">
               <span className="inline-block size-1.5 rounded-full bg-brand" />
-              For engineers on the path to senior · 1,000 problems live
+              Open-source code review practice · 10 language tracks
             </div>
 
             <h1 className="text-[clamp(2.5rem,5.5vw,4.5rem)] font-semibold leading-[1.02] tracking-[-0.03em] text-fg">
@@ -21,8 +20,8 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-[52ch] text-[16px] leading-[1.65] text-fg-2">
-              Seniors don&rsquo;t write more code. They read it sharper. A
-              thousand real broken snippets to train your eye.
+              Seniors don&rsquo;t write more code. They read it sharper. Real
+              broken snippets to train your eye, paired with an AI tutor.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -31,23 +30,9 @@ export default function Home() {
                 render={<Link href="/tracks" />}
                 className="bg-brand text-[#0a0a0a] hover:bg-brand/90 h-11 px-5 text-[14px] font-medium rounded-md"
               >
-                Start solving →
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                render={<Link href="/pricing" />}
-                className="h-11 px-5 text-[14px] font-medium rounded-md border-rule bg-surface-2 text-fg hover:bg-surface-3"
-              >
-                See pricing
+                Sign in to start practicing →
               </Button>
             </div>
-
-            <dl className="mt-10 grid grid-cols-3 gap-6 max-w-md border-t border-rule pt-6">
-              <Stat n="1,000" l="broken snippets" />
-              <Stat n="10" l="languages" />
-              <Stat n="0" l="multiple choice" />
-            </dl>
           </div>
 
           {/* LeetCode-style problem preview card */}
@@ -63,7 +48,7 @@ export default function Home() {
               Tracks
             </div>
             <h2 className="text-2xl font-semibold tracking-tight text-fg">
-              Pick your language. 100 problems each.
+              Ten languages. Pick one.
             </h2>
           </div>
           <div className="text-[13px] text-fg-3">
@@ -73,18 +58,17 @@ export default function Home() {
 
         <div className="overflow-hidden rounded-lg border border-rule bg-surface-2">
           {/* header row */}
-          <div className="hidden md:grid grid-cols-[48px_1.3fr_1fr_1fr_110px] items-center gap-4 px-5 py-3 border-b border-rule text-[11.5px] uppercase tracking-wider text-fg-3 bg-surface-3/40">
+          <div className="hidden md:grid grid-cols-[48px_1.3fr_1fr_110px] items-center gap-4 px-5 py-3 border-b border-rule text-[11.5px] uppercase tracking-wider text-fg-3 bg-surface-3/40">
             <span>#</span>
             <span>Track</span>
             <span>Focus</span>
-            <span>Difficulty mix</span>
-            <span className="text-right">Problems</span>
+            <span className="text-right">Open</span>
           </div>
           {TRACK_IDS.map((t, i) => (
             <Link
               key={t}
               href={`/tracks/${t}`}
-              className="group grid grid-cols-[48px_1fr] md:grid-cols-[48px_1.3fr_1fr_1fr_110px] items-center gap-4 px-5 py-4 border-b border-rule last:border-b-0 hover:bg-surface-3/50 transition"
+              className="group grid grid-cols-[48px_1fr] md:grid-cols-[48px_1.3fr_1fr_110px] items-center gap-4 px-5 py-4 border-b border-rule last:border-b-0 hover:bg-surface-3/50 transition"
             >
               <span className="text-[13px] text-fg-3 tabular-nums">
                 {String(i + 1).padStart(2, "0")}
@@ -103,19 +87,7 @@ export default function Home() {
               <span className="hidden md:block text-[13.5px] text-fg-2 truncate">
                 {TRACK_META[t].blurb}
               </span>
-              <div className="hidden md:flex items-center gap-1.5">
-                <span className="inline-flex items-center h-[22px] px-2 rounded-md pill-easy text-[11.5px] font-medium">
-                  40 Easy
-                </span>
-                <span className="inline-flex items-center h-[22px] px-2 rounded-md pill-medium text-[11.5px] font-medium">
-                  45 Med
-                </span>
-                <span className="inline-flex items-center h-[22px] px-2 rounded-md pill-hard text-[11.5px] font-medium">
-                  15 Hard
-                </span>
-              </div>
               <div className="hidden md:flex items-center justify-end gap-2 text-[13.5px] text-fg-2 tabular-nums">
-                <span>100</span>
                 <span className="text-fg-3 group-hover:text-brand group-hover:translate-x-0.5 transition">→</span>
               </div>
             </Link>
@@ -165,21 +137,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ───────────────────────────── PRICING ─────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1400px] px-6 py-16 border-t border-rule">
-        <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
-          <div>
-            <div className="text-[12px] uppercase tracking-wider text-fg-3 mb-1">
-              Pricing
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-fg">
-              Ten problems free. The rest for less than a book a month.
-            </h2>
-          </div>
-        </div>
-        <PricingCards />
-      </section>
-
       {/* ────────────────────────────── FOOTER ─────────────────────────── */}
       <footer className="mx-auto w-full max-w-[1400px] px-6 py-10 border-t border-rule">
         <div className="flex flex-wrap items-center justify-between gap-4 text-[13px] text-fg-3">
@@ -192,26 +149,12 @@ export default function Home() {
           </div>
           <nav className="flex gap-5">
             <Link href="/tracks" className="hover:text-fg">Problems</Link>
-            <Link href="/pricing" className="hover:text-fg">Pricing</Link>
             <Link href="/terms" className="hover:text-fg">Terms</Link>
             <Link href="/privacy" className="hover:text-fg">Privacy</Link>
           </nav>
         </div>
       </footer>
     </main>
-  );
-}
-
-function Stat({ n, l }: { n: string; l: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[26px] font-semibold text-fg tabular-nums leading-none">
-        {n}
-      </span>
-      <span className="text-[11.5px] uppercase tracking-wider text-fg-3">
-        {l}
-      </span>
-    </div>
   );
 }
 

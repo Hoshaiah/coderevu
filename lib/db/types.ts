@@ -106,27 +106,12 @@ export function isTrackId(value: string): value is TrackId {
   return (TRACK_IDS as readonly string[]).includes(value);
 }
 
-export type SubscriptionStatus = "none" | "active" | "past_due" | "canceled";
-export type Plan = "monthly" | "annual" | null;
-
 export type UserDoc = {
   email: string;
   displayName: string;
   photoURL: string;
   primaryTrack: TrackId | null;
   createdAt: Timestamp;
-  subscription: {
-    status: SubscriptionStatus;
-    plan: Plan;
-    stripeCustomerId: string | null;
-    stripeSubscriptionId: string | null;
-    currentPeriodEnd: Timestamp | null;
-  };
-  aiUsage: {
-    periodStart: Timestamp;
-    spentUsd: number;
-    capUsd: number;
-  };
 };
 
 export type Difficulty = "easy" | "medium" | "hard";
@@ -207,5 +192,3 @@ export type UsageEventDoc = {
   costUsd: number;
   createdAt: Timestamp;
 };
-
-export const DEFAULT_AI_CAP_USD = 4.0;

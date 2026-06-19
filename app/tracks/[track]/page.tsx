@@ -2,13 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { getUserDoc, isSubscriptionActive } from "@/lib/db/users";
 import { listTrackProblems, problemId as makeProblemId } from "@/lib/db/problems";
 import { listProgressByProblemIds } from "@/lib/db/progress";
 import { isTrackId, normalizeProgressStatus, TRACK_META } from "@/lib/db/types";
 import type { Difficulty, ProblemDoc } from "@/lib/db/types";
-
-const FREE_LIMIT = 10;
 
 export default async function TrackPage(
   props: PageProps<"/tracks/[track]">,
@@ -17,9 +14,6 @@ export default async function TrackPage(
   if (!isTrackId(track)) notFound();
 
   const session = await getSessionUser();
-  const user = session ? await getUserDoc(session.uid) : null;
-  const paid = user ? isSubscriptionActive(user) : false;
-  const isPrimary = user?.primaryTrack === track;
   const rawProblems: ProblemDoc[] = await listTrackProblems(track);
   const difficultyRank: Record<Difficulty, number> = { easy: 0, medium: 1, hard: 2 };
   const problems = [...rawProblems].sort(
@@ -137,38 +131,6 @@ export default async function TrackPage(
         )}
       </header>
 
-      {/* upsell for locked track */}
-      {!paid && !isPrimary && user ? (
-        <div className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-rule bg-surface-2 p-4 text-[13.5px]">
-          <div className="flex items-center gap-3">
-            <div className="grid place-items-center size-8 rounded-md bg-surface-3">
-              <LockIcon />
-            </div>
-            <div>
-              <div className="text-fg font-medium">
-                This isn&rsquo;t your free track.
-              </div>
-              <div className="text-fg-3 text-[12.5px]">
-                Upgrade for all tracks, or go back to{" "}
-                <Link
-                  href={`/tracks/${user.primaryTrack}`}
-                  className="text-fg underline decoration-fg-3 underline-offset-2 hover:decoration-brand"
-                >
-                  {TRACK_META[user.primaryTrack!]?.label}
-                </Link>
-                .
-              </div>
-            </div>
-          </div>
-          <Link
-            href="/upgrade"
-            className="shrink-0 inline-flex items-center h-9 px-3.5 rounded-md bg-brand text-[#0a0a0a] text-[13px] font-medium hover:bg-brand/90"
-          >
-            Upgrade →
-          </Link>
-        </div>
-      ) : null}
-
       {/* problem list */}
       {problems.length === 0 ? (
         <div className="mt-10 rounded-lg border border-rule bg-surface-2 p-12 text-center text-fg-3">
@@ -207,18 +169,14 @@ export default async function TrackPage(
               </div>
 
               {groupProblems.map((p) => {
-            const locked = !paid && (!isPrimary || p.orderIndex > FREE_LIMIT);
             const status = normalizeProgressStatus(
               progressMap[makeProblemId(track, p.slug)]?.status,
             );
             return (
               <Link
                 key={p.slug}
-                href={locked ? "/upgrade" : `/tracks/${track}/${p.slug}`}
-                aria-disabled={locked}
-                className={`group grid grid-cols-[52px_1fr] md:grid-cols-[52px_112px_1fr_auto_84px] items-center gap-4 px-4 py-3.5 border-b border-rule last:border-b-0 transition ${
-                  locked ? "opacity-70 hover:bg-surface-3/30" : "hover:bg-surface-3/50"
-                }`}
+                href={`/tracks/${track}/${p.slug}`}
+                className="group grid grid-cols-[52px_1fr] md:grid-cols-[52px_112px_1fr_auto_84px] items-center gap-4 px-4 py-3.5 border-b border-rule last:border-b-0 transition hover:bg-surface-3/50"
               >
                 <span className="text-[12px] font-mono text-fg-3 tabular-nums">
                   {String(p.orderIndex).padStart(3, "0")}
@@ -231,7 +189,6 @@ export default async function TrackPage(
                     <span className="text-[14px] font-medium text-fg group-hover:text-brand transition truncate">
                       {p.title}
                     </span>
-                    {locked && <LockIcon />}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <TagRow tags={p.tags.slice(0, 4)} />
@@ -247,11 +204,6 @@ export default async function TrackPage(
                   <span className="text-[14px] font-medium text-fg group-hover:text-brand transition truncate">
                     {p.title}
                   </span>
-                  {locked && (
-                    <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-fg-3">
-                      <LockIcon />
-                    </span>
-                  )}
                 </div>
                 <div className="hidden md:block">
                   <TagRow tags={p.tags.slice(0, 4)} />
@@ -390,25 +342,5 @@ function Tally({
         {n}
       </div>
     </div>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="text-fg-3"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
   );
 }

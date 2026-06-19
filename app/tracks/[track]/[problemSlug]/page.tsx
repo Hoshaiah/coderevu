@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { getUserDoc, isSubscriptionActive, rolloverAiUsageIfNeeded } from "@/lib/db/users";
+import { getUserDoc } from "@/lib/db/users";
 import { getProblemBySlug, problemId as makeProblemId } from "@/lib/db/problems";
 import { getProgress } from "@/lib/db/progress";
 import { getConversation } from "@/lib/db/conversations";
@@ -11,8 +11,6 @@ import {
 } from "@/lib/db/types";
 import { ProblemWorkspace } from "@/components/problem-workspace";
 
-const FREE_LIMIT = 10;
-
 export default async function ProblemPage(
   props: PageProps<"/tracks/[track]/[problemSlug]">,
 ) {
@@ -22,21 +20,15 @@ export default async function ProblemPage(
   const session = await getSessionUser();
   if (!session) redirect("/");
 
-  let user = await getUserDoc(session.uid);
+  const user = await getUserDoc(session.uid);
   if (!user) redirect("/");
-  user = await rolloverAiUsageIfNeeded(session.uid, user);
 
   const problem = await getProblemBySlug(track, problemSlug);
   if (!problem) notFound();
 
-  const paid = isSubscriptionActive(user);
-  const isPrimary = user.primaryTrack === track;
-  const free = !paid && isPrimary && problem.orderIndex <= FREE_LIMIT;
-  if (!paid && !free) redirect("/upgrade");
-
   const id = makeProblemId(track, problemSlug);
   const progress = await getProgress(session.uid, id);
-  const conversation = paid ? await getConversation(session.uid, id) : null;
+  const conversation = await getConversation(session.uid, id);
 
   return (
     <ProblemWorkspace
@@ -52,12 +44,9 @@ export default async function ProblemPage(
       initiallyRevealed={isProgressRevealed(progress)}
       initialStatus={normalizeProgressStatus(progress?.status)}
       initialDraft={progress?.draftCode ?? problem.buggyCode}
-      chatEnabled={paid}
       initialMessages={
         conversation?.messages.map((m) => ({ role: m.role, content: m.content })) ?? []
       }
-      initialSpentUsd={user.aiUsage.spentUsd}
-      capUsd={user.aiUsage.capUsd}
     />
   );
 }

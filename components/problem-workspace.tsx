@@ -47,10 +47,7 @@ export function ProblemWorkspace({
   initiallyRevealed,
   initialStatus,
   initialDraft,
-  chatEnabled,
   initialMessages,
-  initialSpentUsd,
-  capUsd,
 }: {
   problemId: string;
   title: string;
@@ -64,10 +61,7 @@ export function ProblemWorkspace({
   initiallyRevealed: boolean;
   initialStatus: ProgressState;
   initialDraft: string;
-  chatEnabled: boolean;
   initialMessages: Message[];
-  initialSpentUsd: number;
-  capUsd: number;
 }) {
   const draftRef = useRef<string>(initialDraft);
   const [, setTick] = useState(0);
@@ -193,9 +187,6 @@ export function ProblemWorkspace({
         <ChatPanel
           problemId={problemId}
           initialMessages={initialMessages}
-          initialSpentUsd={initialSpentUsd}
-          capUsd={capUsd}
-          enabled={chatEnabled}
           getDraft={getDraft}
           open={tutorOpen}
           onToggle={() => setTutorOpen((v) => !v)}

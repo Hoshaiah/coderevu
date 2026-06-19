@@ -56,7 +56,6 @@ export function SiteHeader() {
 
           <nav className="hidden md:flex items-center gap-1 text-[13.5px]">
             <NavLink href="/tracks">Problems</NavLink>
-            <NavLink href="/pricing">Pricing</NavLink>
           </nav>
         </div>
 
@@ -66,10 +65,6 @@ export function SiteHeader() {
             <span className="size-8 rounded-full bg-surface-3 animate-pulse" />
           ) : user ? (
             <>
-              <div className="hidden sm:flex items-center gap-1.5 text-[12px] text-fg-3">
-                <span className="inline-block size-1.5 rounded-full bg-brand" />
-                <span>0 solved</span>
-              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger className="focus:outline-none rounded-full focus-visible:ring-2 focus-visible:ring-brand">
                   <Avatar className="size-8 ring-1 ring-rule hover:ring-fg-3 transition">
@@ -97,21 +92,13 @@ export function SiteHeader() {
               </DropdownMenu>
             </>
           ) : (
-            <>
-              <button
-                onClick={handleSignIn}
-                className="text-[13.5px] text-fg-2 hover:text-fg transition"
-              >
-                Sign in
-              </button>
-              <Button
-                onClick={handleSignIn}
-                size="sm"
-                className="h-8 px-3.5 text-[13px] rounded-md bg-brand text-[#0a0a0a] hover:bg-brand/90"
-              >
-                Start free
-              </Button>
-            </>
+            <Button
+              onClick={handleSignIn}
+              size="sm"
+              className="h-8 px-3.5 text-[13px] rounded-md bg-brand text-[#0a0a0a] hover:bg-brand/90"
+            >
+              Sign in
+            </Button>
           )}
         </div>
       </div>

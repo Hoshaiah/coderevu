@@ -2,17 +2,15 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireSession } from "@/lib/auth/session";
-import {
-  getUserDoc,
-  incrementAiSpend,
-  isSubscriptionActive,
-  rolloverAiUsageIfNeeded,
-} from "@/lib/db/users";
 import { getProblemById } from "@/lib/db/problems";
 import { getProgress } from "@/lib/db/progress";
 import { appendMessages, recordUsageEvent } from "@/lib/db/conversations";
 import { CHAT_MODEL, computeCostUsd } from "@/lib/ai/pricing";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
+
+// AI chat is open to every signed-in user. Self-hosters absorb the Anthropic
+// API cost — consider adding your own rate limiting (per-IP, per-user, etc.)
+// before exposing this publicly.
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -27,21 +25,6 @@ type Body = {
 
 export async function POST(req: Request) {
   const session = await requireSession();
-  let user = await getUserDoc(session.uid);
-  if (!user) return NextResponse.json({ error: "No user doc" }, { status: 404 });
-  if (!isSubscriptionActive(user)) {
-    return NextResponse.json(
-      { error: "AI chat requires an active subscription." },
-      { status: 402 },
-    );
-  }
-  user = await rolloverAiUsageIfNeeded(session.uid, user);
-  if (user.aiUsage.spentUsd >= user.aiUsage.capUsd) {
-    return NextResponse.json(
-      { error: "Monthly AI budget reached. Resets on the 1st." },
-      { status: 402 },
-    );
-  }
 
   const body = (await req.json()) as Body;
   const { problemId, messages, draft } = body;
@@ -75,8 +58,6 @@ export async function POST(req: Request) {
 
   const encoder = new TextEncoder();
   const uid = session.uid;
-  const spentBefore = user.aiUsage.spentUsd;
-  const capUsd = user.aiUsage.capUsd;
 
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -91,9 +72,7 @@ export async function POST(req: Request) {
         const tokensIn = finalMessage.usage?.input_tokens ?? 0;
         const tokensOut = finalMessage.usage?.output_tokens ?? 0;
         const costUsd = computeCostUsd(CHAT_MODEL, tokensIn, tokensOut);
-        const newSpentUsd = spentBefore + costUsd;
 
-        await incrementAiSpend(uid, costUsd);
         await recordUsageEvent({
           userId: uid,
           problemId,
@@ -119,7 +98,7 @@ export async function POST(req: Request) {
           costUsd,
         );
 
-        const meta = JSON.stringify({ tokensIn, tokensOut, costUsd, newSpentUsd, capUsd });
+        const meta = JSON.stringify({ tokensIn, tokensOut, costUsd });
         controller.enqueue(encoder.encode(META_SENTINEL + meta));
         controller.close();
       } catch (err) {
