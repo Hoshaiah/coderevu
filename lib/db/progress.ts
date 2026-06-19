@@ -1,103 +1,100 @@
-import { Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { query } from "@/lib/db/client";
 import type { ProgressDoc, ProgressStatus } from "@/lib/db/types";
 
-function progressRef(uid: string, problemId: string) {
-  return adminDb().collection("users").doc(uid).collection("progress").doc(problemId);
+type ProgressRow = {
+  status: ProgressStatus;
+  revealed: boolean;
+  draft_code: string | null;
+  started_at: Date;
+  updated_at: Date;
+};
+
+function rowToDoc(row: ProgressRow): ProgressDoc {
+  return {
+    status: row.status,
+    revealed: row.revealed,
+    draftCode: row.draft_code,
+    startedAt: row.started_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export async function getProgress(
-  uid: string,
-  problemId: string,
+  sessionId: string,
+  problemSlug: string,
 ): Promise<ProgressDoc | null> {
-  const snap = await progressRef(uid, problemId).get();
-  return snap.exists ? (snap.data() as ProgressDoc) : null;
+  const res = await query<ProgressRow>(
+    `SELECT status, revealed, draft_code, started_at, updated_at
+       FROM progress
+      WHERE session_id = $1 AND problem_slug = $2`,
+    [sessionId, problemSlug],
+  );
+  const row = res.rows[0];
+  return row ? rowToDoc(row) : null;
 }
 
-// Batch-fetch progress docs for a list of problem IDs. Returns a map keyed by
-// problemId (missing docs are absent from the map).
-export async function listProgressByProblemIds(
-  uid: string,
-  problemIds: string[],
+export async function listProgressBySlugs(
+  sessionId: string,
+  problemSlugs: string[],
 ): Promise<Record<string, ProgressDoc>> {
-  if (problemIds.length === 0) return {};
-  const refs = problemIds.map((id) => progressRef(uid, id));
-  const snaps = await adminDb().getAll(...refs);
+  if (problemSlugs.length === 0) return {};
+  const res = await query<ProgressRow & { problem_slug: string }>(
+    `SELECT problem_slug, status, revealed, draft_code, started_at, updated_at
+       FROM progress
+      WHERE session_id = $1 AND problem_slug = ANY($2::text[])`,
+    [sessionId, problemSlugs],
+  );
   const out: Record<string, ProgressDoc> = {};
-  snaps.forEach((snap, i) => {
-    if (snap.exists) out[problemIds[i]] = snap.data() as ProgressDoc;
-  });
+  for (const row of res.rows) {
+    out[row.problem_slug] = rowToDoc(row);
+  }
   return out;
 }
 
-// Saves the user's draft. If no doc exists yet, creates one in "in-progress"
-// so the status pill reflects that they've started. If one exists and status
-// is "todo", auto-bumps to "in-progress" on the first edit.
+// Saves the user's draft. Auto-creates the row in "in-progress" if absent,
+// and bumps "todo" → "in-progress" on the first edit.
 export async function upsertDraft(
-  uid: string,
-  problemId: string,
+  sessionId: string,
+  problemSlug: string,
   draftCode: string,
 ): Promise<void> {
-  const ref = progressRef(uid, problemId);
-  const snap = await ref.get();
-  const now = Timestamp.now();
-  if (!snap.exists) {
-    const doc: ProgressDoc = {
-      status: "in-progress",
-      revealed: false,
-      draftCode,
-      startedAt: now,
-      updatedAt: now,
-    };
-    await ref.set(doc);
-    return;
-  }
-  const data = snap.data() as ProgressDoc;
-  const updates: Record<string, unknown> = { draftCode, updatedAt: now };
-  if (data.status === "todo") updates.status = "in-progress";
-  await ref.update(updates);
+  await query(
+    `INSERT INTO progress (session_id, problem_slug, status, revealed, draft_code, started_at, updated_at)
+     VALUES ($1, $2, 'in-progress', false, $3, now(), now())
+     ON CONFLICT (session_id, problem_slug) DO UPDATE
+       SET draft_code = EXCLUDED.draft_code,
+           status     = CASE WHEN progress.status = 'todo' THEN 'in-progress' ELSE progress.status END,
+           updated_at = now()`,
+    [sessionId, problemSlug, draftCode],
+  );
 }
 
 export async function setProgressStatus(
-  uid: string,
-  problemId: string,
+  sessionId: string,
+  problemSlug: string,
   status: ProgressStatus,
 ): Promise<void> {
-  const ref = progressRef(uid, problemId);
-  const snap = await ref.get();
-  const now = Timestamp.now();
-  if (!snap.exists) {
-    const doc: ProgressDoc = {
-      status,
-      revealed: false,
-      draftCode: null,
-      startedAt: now,
-      updatedAt: now,
-    };
-    await ref.set(doc);
-    return;
-  }
-  await ref.update({ status, updatedAt: now });
+  await query(
+    `INSERT INTO progress (session_id, problem_slug, status, revealed, draft_code, started_at, updated_at)
+     VALUES ($1, $2, $3, false, NULL, now(), now())
+     ON CONFLICT (session_id, problem_slug) DO UPDATE
+       SET status = EXCLUDED.status,
+           updated_at = now()`,
+    [sessionId, problemSlug, status],
+  );
 }
 
 export async function setRevealed(
-  uid: string,
-  problemId: string,
+  sessionId: string,
+  problemSlug: string,
   revealed: boolean,
 ): Promise<void> {
-  const ref = progressRef(uid, problemId);
-  const snap = await ref.get();
-  const now = Timestamp.now();
-  if (!snap.exists) {
-    const doc: ProgressDoc = {
-      status: "in-progress",
-      revealed,
-      draftCode: null,
-      startedAt: now,
-      updatedAt: now,
-    };
-    await ref.set(doc);
-    return;
-  }
-  await ref.update({ revealed, updatedAt: now });
+  await query(
+    `INSERT INTO progress (session_id, problem_slug, status, revealed, draft_code, started_at, updated_at)
+     VALUES ($1, $2, 'in-progress', $3, NULL, now(), now())
+     ON CONFLICT (session_id, problem_slug) DO UPDATE
+       SET revealed = EXCLUDED.revealed,
+           updated_at = now()`,
+    [sessionId, problemSlug, revealed],
+  );
 }

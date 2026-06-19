@@ -13,8 +13,6 @@ coverage
 !.env.example
 
 # secrets
-service-account.json
-*-firebase-adminsdk-*.json
 *.pem
 
 # editor / OS

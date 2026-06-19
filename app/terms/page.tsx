@@ -7,7 +7,7 @@ export default function TermsPage() {
       </p>
       <ol className="list-decimal pl-5 space-y-3 text-sm text-muted-foreground mt-6">
         <li>Using CodeRevu means agreeing to these terms.</li>
-        <li>Accounts are tied to a Google identity. Keep your credentials safe.</li>
+        <li>There are no accounts. Progress is tied to a cookie on your browser.</li>
         <li>AI responses are generated and may be wrong. Always verify before trusting.</li>
         <li>These terms may be updated with reasonable notice.</li>
       </ol>

@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSessionUser } from "@/lib/auth/session";
+import { getOrCreateSessionId } from "@/lib/db/session";
 import { listTrackProblems, problemId as makeProblemId } from "@/lib/db/problems";
-import { listProgressByProblemIds } from "@/lib/db/progress";
+import { listProgressBySlugs } from "@/lib/db/progress";
 import { isTrackId, normalizeProgressStatus, TRACK_META } from "@/lib/db/types";
 import type { Difficulty, ProblemDoc } from "@/lib/db/types";
 
@@ -13,8 +13,8 @@ export default async function TrackPage(
   const { track } = await props.params;
   if (!isTrackId(track)) notFound();
 
-  const session = await getSessionUser();
-  const rawProblems: ProblemDoc[] = await listTrackProblems(track);
+  const sessionId = await getOrCreateSessionId();
+  const rawProblems: ProblemDoc[] = listTrackProblems(track);
   const difficultyRank: Record<Difficulty, number> = { easy: 0, medium: 1, hard: 2 };
   const problems = [...rawProblems].sort(
     (a, b) =>
@@ -52,14 +52,12 @@ export default async function TrackPage(
     ),
   }));
 
-  // Batch-load progress for all problems so each row can render the user's
-  // current status pill (todo / in-progress / complete).
-  const progressMap = session
-    ? await listProgressByProblemIds(
-        session.uid,
-        problems.map((p) => makeProblemId(track, p.slug)),
-      )
-    : {};
+  // Batch-load progress for all problems so each row can render the
+  // session's current status pill (todo / in-progress / complete).
+  const progressMap = await listProgressBySlugs(
+    sessionId,
+    problems.map((p) => makeProblemId(track, p.slug)),
+  );
 
   // tallies for the hero strip
   const counts = problems.reduce(
@@ -134,11 +132,11 @@ export default async function TrackPage(
       {/* problem list */}
       {problems.length === 0 ? (
         <div className="mt-10 rounded-lg border border-rule bg-surface-2 p-12 text-center text-fg-3">
-          No problems yet. Run{" "}
+          No problems found in{" "}
           <code className="px-1.5 py-0.5 rounded bg-surface-3 text-fg font-mono text-[12.5px]">
-            pnpm seed
-          </code>{" "}
-          to import content.
+            content/{track}/
+          </code>
+          .
         </div>
       ) : (
         <div className="mt-8 space-y-8">

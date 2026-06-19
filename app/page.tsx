@@ -30,7 +30,7 @@ export default function Home() {
                 render={<Link href="/tracks" />}
                 className="bg-brand text-[#0a0a0a] hover:bg-brand/90 h-11 px-5 text-[14px] font-medium rounded-md"
               >
-                Sign in to start practicing →
+                Start practicing →
               </Button>
             </div>
           </div>

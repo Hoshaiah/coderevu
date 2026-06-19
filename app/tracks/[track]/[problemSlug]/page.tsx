@@ -1,6 +1,5 @@
-import { notFound, redirect } from "next/navigation";
-import { getSessionUser } from "@/lib/auth/session";
-import { getUserDoc } from "@/lib/db/users";
+import { notFound } from "next/navigation";
+import { getOrCreateSessionId } from "@/lib/db/session";
 import { getProblemBySlug, problemId as makeProblemId } from "@/lib/db/problems";
 import { getProgress } from "@/lib/db/progress";
 import { getConversation } from "@/lib/db/conversations";
@@ -17,18 +16,14 @@ export default async function ProblemPage(
   const { track, problemSlug } = await props.params;
   if (!isTrackId(track)) notFound();
 
-  const session = await getSessionUser();
-  if (!session) redirect("/");
+  const sessionId = await getOrCreateSessionId();
 
-  const user = await getUserDoc(session.uid);
-  if (!user) redirect("/");
-
-  const problem = await getProblemBySlug(track, problemSlug);
+  const problem = getProblemBySlug(track, problemSlug);
   if (!problem) notFound();
 
   const id = makeProblemId(track, problemSlug);
-  const progress = await getProgress(session.uid, id);
-  const conversation = await getConversation(session.uid, id);
+  const progress = await getProgress(sessionId, id);
+  const conversation = await getConversation(sessionId, id);
 
   return (
     <ProblemWorkspace
@@ -47,6 +42,7 @@ export default async function ProblemPage(
       initialMessages={
         conversation?.messages.map((m) => ({ role: m.role, content: m.content })) ?? []
       }
+      aiEnabled={Boolean(process.env.ANTHROPIC_API_KEY)}
     />
   );
 }

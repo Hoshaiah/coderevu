@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { Timestamp } from "firebase-admin/firestore";
-import { requireSession } from "@/lib/auth/session";
+import { getOrCreateSessionId } from "@/lib/db/session";
 import { getProblemById } from "@/lib/db/problems";
 import { getProgress } from "@/lib/db/progress";
-import { appendMessages, recordUsageEvent } from "@/lib/db/conversations";
+import { appendMessages } from "@/lib/db/conversations";
+import { recordUsageEvent } from "@/lib/db/usage";
 import { CHAT_MODEL, computeCostUsd } from "@/lib/ai/pricing";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
+import type { ChatMessage } from "@/lib/db/types";
 
-// AI chat is open to every signed-in user. Self-hosters absorb the Anthropic
-// API cost — consider adding your own rate limiting (per-IP, per-user, etc.)
-// before exposing this publicly.
+// AI chat is open to every browser session. Self-hosters absorb the
+// Anthropic API cost — consider adding your own rate limiting (per-IP,
+// per-session, etc.) before exposing this publicly.
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,7 +25,18 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const session = await requireSession();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        error:
+          "AI is not configured — set ANTHROPIC_API_KEY in .env to enable the AI tutor.",
+      },
+      { status: 503 },
+    );
+  }
+
+  const sessionId = await getOrCreateSessionId();
 
   const body = (await req.json()) as Body;
   const { problemId, messages, draft } = body;
@@ -35,19 +47,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Last message must be user" }, { status: 400 });
   }
 
-  const problem = await getProblemById(problemId);
+  const problem = getProblemById(problemId);
   if (!problem) return NextResponse.json({ error: "Problem not found" }, { status: 404 });
 
-  const progress = await getProgress(session.uid, problemId);
-  const revealed = progress?.status === "revealed" || progress?.status === "solved";
+  const progress = await getProgress(sessionId, problemId);
+  const revealed = progress?.revealed === true;
   const system = buildSystemPrompt(problem, draft ?? null, revealed);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: "Missing ANTHROPIC_API_KEY" }, { status: 500 });
   const anthropic = new Anthropic({ apiKey });
 
   const userMessage = messages[messages.length - 1];
-  const historyForPersist = [userMessage];
 
   const stream = anthropic.messages.stream({
     model: CHAT_MODEL,
@@ -57,7 +66,6 @@ export async function POST(req: Request) {
   });
 
   const encoder = new TextEncoder();
-  const uid = session.uid;
 
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -73,30 +81,27 @@ export async function POST(req: Request) {
         const tokensOut = finalMessage.usage?.output_tokens ?? 0;
         const costUsd = computeCostUsd(CHAT_MODEL, tokensIn, tokensOut);
 
-        await recordUsageEvent({
-          userId: uid,
+        await recordUsageEvent(
+          sessionId,
           problemId,
-          model: CHAT_MODEL,
+          CHAT_MODEL,
           tokensIn,
           tokensOut,
           costUsd,
-        });
-        await appendMessages(
-          uid,
-          problemId,
-          [
-            { ...historyForPersist[0], createdAt: Timestamp.now() },
-            {
-              role: "assistant",
-              content: assistantText,
-              tokensIn,
-              tokensOut,
-              costUsd,
-              createdAt: Timestamp.now(),
-            },
-          ],
-          costUsd,
         );
+        const now = new Date().toISOString();
+        const persistable: ChatMessage[] = [
+          { role: "user", content: userMessage.content, createdAt: now },
+          {
+            role: "assistant",
+            content: assistantText,
+            tokensIn,
+            tokensOut,
+            costUsd,
+            createdAt: now,
+          },
+        ];
+        await appendMessages(sessionId, problemId, persistable);
 
         const meta = JSON.stringify({ tokensIn, tokensOut, costUsd });
         controller.enqueue(encoder.encode(META_SENTINEL + meta));

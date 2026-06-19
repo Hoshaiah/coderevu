@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -34,11 +33,9 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrains.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-surface text-fg">
-        <AuthProvider>
-          <SiteHeader />
-          <div className="flex-1 flex flex-col">{children}</div>
-          <Toaster richColors position="top-center" theme="dark" />
-        </AuthProvider>
+        <SiteHeader />
+        <div className="flex-1 flex flex-col">{children}</div>
+        <Toaster richColors position="top-center" theme="dark" />
       </body>
     </html>
   );

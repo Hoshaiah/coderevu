@@ -1,5 +1,3 @@
-import type { Timestamp } from "firebase-admin/firestore";
-
 export const TRACK_IDS = [
   "python",
   "javascript",
@@ -106,14 +104,6 @@ export function isTrackId(value: string): value is TrackId {
   return (TRACK_IDS as readonly string[]).includes(value);
 }
 
-export type UserDoc = {
-  email: string;
-  displayName: string;
-  photoURL: string;
-  primaryTrack: TrackId | null;
-  createdAt: Timestamp;
-};
-
 export type Difficulty = "easy" | "medium" | "hard";
 
 export type ProblemDoc = {
@@ -128,44 +118,30 @@ export type ProblemDoc = {
   buggyCode: string;
   referenceSolution: string;
   explanation: string;
-  createdAt: Timestamp;
 };
 
-// Legacy values ("started", "revealed", "solved") still live in existing
-// Firestore docs — new writes use the user-facing values below.
-export type ProgressStatus =
-  | "todo"
-  | "in-progress"
-  | "complete"
-  | "started" // legacy → treat as "in-progress"
-  | "revealed" // legacy → treat as "in-progress" with revealed=true
-  | "solved"; // legacy → treat as "complete"
+export type ProgressStatus = "todo" | "in-progress" | "complete";
 
 export type ProgressDoc = {
   status: ProgressStatus;
-  revealed?: boolean;
+  revealed: boolean;
   draftCode: string | null;
-  startedAt: Timestamp;
-  updatedAt: Timestamp;
+  startedAt: Date;
+  updatedAt: Date;
 };
 
-// Normalize any stored status (including legacy values) into the three
-// user-facing states.
+// Postgres only stores the three canonical states. Kept as a function so
+// callers can pass `undefined` (no row yet) and get a sane default.
 export function normalizeProgressStatus(
   status: ProgressStatus | undefined,
-): "todo" | "in-progress" | "complete" {
-  if (status === "complete" || status === "solved") return "complete";
-  if (status === "in-progress" || status === "started" || status === "revealed")
-    return "in-progress";
+): ProgressStatus {
+  if (status === "complete") return "complete";
+  if (status === "in-progress") return "in-progress";
   return "todo";
 }
 
-// A doc counts as "revealed" if either the explicit flag is set OR it has a
-// legacy status that implies reveal happened.
 export function isProgressRevealed(doc: ProgressDoc | null | undefined): boolean {
-  if (!doc) return false;
-  if (doc.revealed === true) return true;
-  return doc.status === "revealed" || doc.status === "solved";
+  return doc?.revealed === true;
 }
 
 export type ChatMessage = {
@@ -174,21 +150,10 @@ export type ChatMessage = {
   tokensIn?: number;
   tokensOut?: number;
   costUsd?: number;
-  createdAt: Timestamp;
+  createdAt: string; // ISO string — stored in jsonb, easier than parsing Date
 };
 
 export type ConversationDoc = {
   messages: ChatMessage[];
-  totalCostUsd: number;
-  updatedAt: Timestamp;
-};
-
-export type UsageEventDoc = {
-  userId: string;
-  problemId: string;
-  model: string;
-  tokensIn: number;
-  tokensOut: number;
-  costUsd: number;
-  createdAt: Timestamp;
+  updatedAt: Date;
 };

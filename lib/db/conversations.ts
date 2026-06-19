@@ -1,68 +1,54 @@
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { query } from "@/lib/db/client";
 import type { ChatMessage, ConversationDoc } from "@/lib/db/types";
 
-function convRef(uid: string, problemId: string) {
-  return adminDb().collection("users").doc(uid).collection("conversations").doc(problemId);
-}
+type ConversationRow = {
+  messages: ChatMessage[];
+  updated_at: Date;
+};
 
 export async function getConversation(
-  uid: string,
-  problemId: string,
+  sessionId: string,
+  problemSlug: string,
 ): Promise<ConversationDoc | null> {
-  const snap = await convRef(uid, problemId).get();
-  return snap.exists ? (snap.data() as ConversationDoc) : null;
+  const res = await query<ConversationRow>(
+    `SELECT messages, updated_at
+       FROM conversations
+      WHERE session_id = $1 AND problem_slug = $2`,
+    [sessionId, problemSlug],
+  );
+  const row = res.rows[0];
+  if (!row) return null;
+  return { messages: row.messages, updatedAt: row.updated_at };
 }
 
 export async function appendMessages(
-  uid: string,
-  problemId: string,
+  sessionId: string,
+  problemSlug: string,
   messages: ChatMessage[],
-  costDelta: number,
 ): Promise<void> {
-  const ref = convRef(uid, problemId);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    const doc: ConversationDoc = {
-      messages,
-      totalCostUsd: costDelta,
-      updatedAt: Timestamp.now(),
-    };
-    await ref.set(doc);
-    return;
-  }
-  await ref.update({
-    messages: FieldValue.arrayUnion(...messages),
-    totalCostUsd: FieldValue.increment(costDelta),
-    updatedAt: Timestamp.now(),
-  });
-}
-
-export async function clearConversation(
-  uid: string,
-  problemId: string,
-): Promise<void> {
-  // Soft-clear: keep the doc but empty the messages array. Preserves the
-  // running totalCostUsd so the user's monthly meter and history accounting
-  // is unaffected by a chat reset.
-  await convRef(uid, problemId).set(
-    {
-      messages: [],
-      updatedAt: Timestamp.now(),
-    },
-    { merge: true },
+  if (messages.length === 0) return;
+  await query(
+    `INSERT INTO conversations (session_id, problem_slug, messages, updated_at)
+     VALUES ($1, $2, $3::jsonb, now())
+     ON CONFLICT (session_id, problem_slug) DO UPDATE
+       SET messages   = conversations.messages || EXCLUDED.messages,
+           updated_at = now()`,
+    [sessionId, problemSlug, JSON.stringify(messages)],
   );
 }
 
-export async function recordUsageEvent(input: {
-  userId: string;
-  problemId: string;
-  model: string;
-  tokensIn: number;
-  tokensOut: number;
-  costUsd: number;
-}): Promise<void> {
-  await adminDb()
-    .collection("usageEvents")
-    .add({ ...input, createdAt: Timestamp.now() });
+// Soft clear — keep the row, drop the messages array. Mirrors the old
+// Firestore behavior so the rest of the UI is unchanged.
+export async function clearConversation(
+  sessionId: string,
+  problemSlug: string,
+): Promise<void> {
+  await query(
+    `INSERT INTO conversations (session_id, problem_slug, messages, updated_at)
+     VALUES ($1, $2, '[]'::jsonb, now())
+     ON CONFLICT (session_id, problem_slug) DO UPDATE
+       SET messages   = '[]'::jsonb,
+           updated_at = now()`,
+    [sessionId, problemSlug],
+  );
 }

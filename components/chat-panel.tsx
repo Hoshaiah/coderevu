@@ -43,12 +43,14 @@ export function ChatPanel({
   getDraft,
   open,
   onToggle,
+  aiEnabled,
 }: {
   problemId: string;
   initialMessages: Message[];
   getDraft: () => string;
   open: boolean;
   onToggle: () => void;
+  aiEnabled: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -130,6 +132,18 @@ export function ChatPanel({
         body: JSON.stringify({ problemId, messages: next, draft: getDraft() }),
         signal: controller.signal,
       });
+      if (res.status === 503) {
+        // Server reports the API key is missing. Surface the same message
+        // the empty state shows and bail out cleanly.
+        let msg = "AI is not configured — set ANTHROPIC_API_KEY in .env to enable the AI tutor.";
+        try {
+          const body = (await res.json()) as { error?: string };
+          if (body.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        setMessages(next);
+        return;
+      }
       if (!res.ok || !res.body) {
         const err = await res.text();
         throw new Error(err || "Chat failed");
@@ -199,7 +213,24 @@ export function ChatPanel({
       {header}
 
       <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 space-y-4">
-        {messages.length === 0 ? (
+        {!aiEnabled ? (
+          <div className="rounded-lg border border-dashed border-rule bg-surface-2 p-4 text-[12.5px] leading-[1.6] text-fg-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-fg-3 mb-1.5">
+              AI tutor disabled
+            </div>
+            <p>
+              Set{" "}
+              <code className="font-mono text-[12px] px-1.5 py-0.5 rounded bg-surface-3 text-fg">
+                ANTHROPIC_API_KEY
+              </code>{" "}
+              in <code className="font-mono text-[12px] px-1.5 py-0.5 rounded bg-surface-3 text-fg">.env</code> to
+              enable the AI tutor.
+            </p>
+            <p className="mt-2 text-fg-3">
+              Everything else — problems, drafts, progress — works without it.
+            </p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="rounded-lg border border-dashed border-rule bg-surface-2 p-4 text-[12.5px] leading-[1.6] text-fg-3">
             Ask anything about this problem. Start with what you think is wrong —
             the tutor will probe before answering.
@@ -210,48 +241,50 @@ export function ChatPanel({
         ))}
       </div>
 
-      <div className="border-t border-rule bg-surface-2">
-        {/* quick suggestion chips */}
-        <div className="px-3 pt-3 flex flex-wrap gap-1.5">
-          {QUICK_SUGGESTIONS.map((s) => (
-            <button
-              key={s.label}
-              type="button"
-              onClick={() => fillSuggestion(s.prompt)}
-              disabled={streaming}
-              className="inline-flex items-center h-7 px-2.5 rounded-md border border-rule bg-surface text-[11.5px] text-fg-2 hover:text-fg hover:border-brand/60 hover:bg-surface-3 transition disabled:opacity-50"
-              title={s.prompt}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+      {aiEnabled && (
+        <div className="border-t border-rule bg-surface-2">
+          {/* quick suggestion chips */}
+          <div className="px-3 pt-3 flex flex-wrap gap-1.5">
+            {QUICK_SUGGESTIONS.map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => fillSuggestion(s.prompt)}
+                disabled={streaming}
+                className="inline-flex items-center h-7 px-2.5 rounded-md border border-rule bg-surface text-[11.5px] text-fg-2 hover:text-fg hover:border-brand/60 hover:bg-surface-3 transition disabled:opacity-50"
+                title={s.prompt}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
 
-        <form onSubmit={handleSubmit} className="p-3 flex gap-2 min-w-0">
-          <Textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about a specific line or approach…  (↵ to send · ⇧↵ for newline)"
-            rows={2}
-            className="flex-1 min-w-0 max-w-full resize-none [field-sizing:fixed] break-words text-[13px] bg-surface border-rule focus-visible:ring-brand focus-visible:border-brand"
-            disabled={streaming}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                e.currentTarget.form?.requestSubmit();
-              }
-            }}
-          />
-          <Button
-            type="submit"
-            disabled={streaming || !input.trim()}
-            className="bg-brand text-[#0a0a0a] hover:bg-brand/90 h-auto self-stretch px-3.5 text-[13px] font-medium disabled:opacity-50"
-          >
-            {streaming ? "…" : "Send"}
-          </Button>
-        </form>
-      </div>
+          <form onSubmit={handleSubmit} className="p-3 flex gap-2 min-w-0">
+            <Textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about a specific line or approach…  (↵ to send · ⇧↵ for newline)"
+              rows={2}
+              className="flex-1 min-w-0 max-w-full resize-none [field-sizing:fixed] break-words text-[13px] bg-surface border-rule focus-visible:ring-brand focus-visible:border-brand"
+              disabled={streaming}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
+            />
+            <Button
+              type="submit"
+              disabled={streaming || !input.trim()}
+              className="bg-brand text-[#0a0a0a] hover:bg-brand/90 h-auto self-stretch px-3.5 text-[13px] font-medium disabled:opacity-50"
+            >
+              {streaming ? "…" : "Send"}
+            </Button>
+          </form>
+        </div>
+      )}
 
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent className="bg-surface-2 border border-rule ring-1 ring-rule text-fg max-w-md">

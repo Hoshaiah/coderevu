@@ -1,24 +1,55 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: coderevu-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-coderevu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coderevu}
+      POSTGRES_DB: ${POSTGRES_DB:-coderevu}
+    volumes:
+      - coderevu_postgres:/var/lib/postgresql/data
+    ports:
+      # Host 5433 -> container 5432 to avoid colliding with a local
+      # Postgres that may already be running on 5432.
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coderevu} -d ${POSTGRES_DB:-coderevu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   app:
     build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: coderevu-app
     env_file:
-      - .env.local
+      # Both are optional. .env.local (if present) overrides .env so an
+      # existing local setup with ANTHROPIC_API_KEY already in .env.local
+      # keeps working without changes.
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
+      # Inside the compose network, the app reaches Postgres at the
+      # service hostname `postgres` on 5432 (not the host-mapped 5433).
+      DATABASE_URL: postgres://${POSTGRES_USER:-coderevu}:${POSTGRES_PASSWORD:-coderevu}@postgres:5432/${POSTGRES_DB:-coderevu}
       # Monaco's bundles push Turbopack past the default 4GB heap and trigger
       # "approaching memory threshold" auto-restarts mid-request. Give node
       # more headroom in dev.
       NODE_OPTIONS: "--max-old-space-size=8192"
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       # Host 3001 -> container 3000 (3000 is taken on the host by another
-      # project). Set NEXT_PUBLIC_APP_URL in .env.local to http://localhost:3001
+      # project). Set NEXT_PUBLIC_APP_URL in .env to http://localhost:3001
       # if you reach the app via the host port.
       - "3001:3000"
     volumes:
-      # Live source for hot reload. This also exposes ./service-account.json
-      # if present, which lib/firebase/admin.ts picks up from cwd.
+      # Live source for hot reload.
       - .:/app
       # Keep container-installed node_modules and .next separate from the host
       # so alpine-compiled binaries don't collide with the mac host.
@@ -29,3 +60,4 @@ services:
 volumes:
   coderevu_node_modules:
   coderevu_next:
+  coderevu_postgres:

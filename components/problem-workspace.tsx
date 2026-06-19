@@ -48,6 +48,7 @@ export function ProblemWorkspace({
   initialStatus,
   initialDraft,
   initialMessages,
+  aiEnabled,
 }: {
   problemId: string;
   title: string;
@@ -62,6 +63,7 @@ export function ProblemWorkspace({
   initialStatus: ProgressState;
   initialDraft: string;
   initialMessages: Message[];
+  aiEnabled: boolean;
 }) {
   const draftRef = useRef<string>(initialDraft);
   const [, setTick] = useState(0);
@@ -190,6 +192,7 @@ export function ProblemWorkspace({
           getDraft={getDraft}
           open={tutorOpen}
           onToggle={() => setTutorOpen((v) => !v)}
+          aiEnabled={aiEnabled}
         />
       </Panel>
     </PanelGroup>
