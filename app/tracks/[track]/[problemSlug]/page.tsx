@@ -39,7 +39,12 @@ export default async function ProblemPage(
         difficultyRank[a.difficulty] - difficultyRank[b.difficulty] ||
         a.orderIndex - b.orderIndex,
     )
-    .map((p) => ({ slug: p.slug, title: p.title, difficulty: p.difficulty }));
+    .map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      difficulty: p.difficulty,
+      tags: p.tags,
+    }));
 
   return (
     <ProblemWorkspace

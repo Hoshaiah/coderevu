@@ -208,6 +208,7 @@
 /* Problem-view display preferences (set by components/problem-nav.tsx).
    The client component writes data-* attrs onto <html>; elements opt in
    with their own data-* attrs. CSS-only so SSR markup stays cacheable. */
-html[data-prefs-tags="hidden"] [data-tag-row] {
+html[data-prefs-tags="hidden"] [data-tag-row],
+html[data-prefs-tags="hidden"] [data-difficulty-pill] {
   display: none;
 }

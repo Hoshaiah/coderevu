@@ -17,7 +17,38 @@ export type NavProblem = {
   slug: string;
   title: string;
   difficulty: "easy" | "medium" | "hard";
+  tags: string[];
 };
+
+const CATEGORY_LABEL_OVERRIDES: Record<string, string> = {
+  "n+1": "N+1",
+  "sql": "SQL",
+  "xml": "XML",
+  "xss": "XSS",
+  "csrf": "CSRF",
+  "api": "API",
+  "io": "I/O",
+  "jwt": "JWT",
+  "orm": "ORM",
+  "ui": "UI",
+  "ux": "UX",
+  "url": "URL",
+  "http": "HTTP",
+  "id": "ID",
+  "db": "DB",
+  "uuid": "UUID",
+  "json": "JSON",
+  "yaml": "YAML",
+  "active-record": "ActiveRecord",
+  "xxe": "XXE",
+};
+
+function prettifyCategory(c: string): string {
+  return c
+    .split("-")
+    .map((w) => CATEGORY_LABEL_OVERRIDES[w] ?? w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 const STORAGE_KEY = "coderevu_show_problem_tags";
 
@@ -59,6 +90,24 @@ export function ProblemNav({
   const currentIndex = problems.findIndex((p) => p.slug === currentSlug);
   const prev = currentIndex > 0 ? problems[currentIndex - 1] : null;
   const next = currentIndex >= 0 && currentIndex < problems.length - 1 ? problems[currentIndex + 1] : null;
+
+  // Group by first tag (the category), matching the track-page layout.
+  const groupedMap = new Map<string, NavProblem[]>();
+  for (const p of problems) {
+    const c = p.tags[0] ?? "uncategorized";
+    const arr = groupedMap.get(c) ?? [];
+    arr.push(p);
+    groupedMap.set(c, arr);
+  }
+  const seenCats = Array.from(groupedMap.keys());
+  const orderedCats = [
+    ...meta.topics.filter((t) => groupedMap.has(t)),
+    ...seenCats.filter((c) => !meta.topics.includes(c)).sort(),
+  ];
+  const grouped = orderedCats.map((cat) => ({
+    category: cat,
+    items: groupedMap.get(cat) ?? [],
+  }));
 
   function toggleTags() {
     const next = !showTags;
@@ -107,30 +156,59 @@ export function ProblemNav({
               {meta.label} problems
             </DialogTitle>
           </DialogHeader>
-          <ul className="mt-2 -mx-2 overflow-y-auto divide-y divide-rule">
-            {problems.map((p, i) => {
-              const active = p.slug === currentSlug;
-              return (
-                <li key={p.slug}>
-                  <Link
-                    href={`/tracks/${track}/${p.slug}`}
-                    onClick={() => setListOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 text-[13px] transition ${
-                      active
-                        ? "bg-brand/10 text-fg"
-                        : "text-fg-2 hover:bg-surface-3/60 hover:text-fg"
-                    }`}
-                  >
-                    <span className="w-7 text-[11px] font-mono text-fg-3 tabular-nums shrink-0">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 truncate">{p.title}</span>
-                    <DifficultyDot d={p.difficulty} />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="mt-2 overflow-y-auto space-y-3 pr-1">
+            {grouped.map(({ category, items }) => (
+              <section
+                key={category}
+                className="rounded-md border border-rule bg-surface overflow-hidden"
+              >
+                <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-rule bg-surface-3/40">
+                  <h4 className="text-[11px] uppercase tracking-[0.14em] text-fg font-medium flex items-center gap-2">
+                    <span className="inline-block size-1.5 rounded-full bg-brand" />
+                    {prettifyCategory(category)}
+                  </h4>
+                  <span className="text-[10.5px] text-fg-3 tabular-nums">
+                    {items.length}
+                  </span>
+                </div>
+                <ul className="divide-y divide-rule">
+                  {items.map((p) => {
+                    const active = p.slug === currentSlug;
+                    return (
+                      <li key={p.slug}>
+                        <Link
+                          href={`/tracks/${track}/${p.slug}`}
+                          onClick={() => setListOpen(false)}
+                          className={`flex items-start gap-3 px-3 py-2.5 text-[13px] transition ${
+                            active
+                              ? "bg-brand/10 text-fg"
+                              : "text-fg-2 hover:bg-surface-3/60 hover:text-fg"
+                          }`}
+                        >
+                          <DifficultyDot d={p.difficulty} className="mt-1.5" />
+                          <span className="flex-1 min-w-0">
+                            <span className="block truncate font-medium">{p.title}</span>
+                            {p.tags.length > 0 && (
+                              <span className="mt-1 flex flex-wrap gap-1">
+                                {p.tags.slice(0, 4).map((t) => (
+                                  <span
+                                    key={t}
+                                    className="inline-flex h-[18px] items-center px-1.5 rounded-md border border-rule bg-surface-2 text-[10px] font-mono text-fg-3"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </span>
+                            )}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -138,8 +216,8 @@ export function ProblemNav({
       <div className="flex items-center gap-1">
         <NavBtn
           onClick={toggleTags}
-          title={showTags ? "Hide tags" : "Show tags"}
-          aria-label={showTags ? "Hide tags" : "Show tags"}
+          title={showTags ? "Hide tags & difficulty" : "Show tags & difficulty"}
+          aria-label={showTags ? "Hide tags and difficulty" : "Show tags and difficulty"}
         >
           {showTags ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
         </NavBtn>
@@ -204,7 +282,19 @@ function NavBtn({
   );
 }
 
-function DifficultyDot({ d }: { d: "easy" | "medium" | "hard" }) {
+function DifficultyDot({
+  d,
+  className = "",
+}: {
+  d: "easy" | "medium" | "hard";
+  className?: string;
+}) {
   const cls = d === "easy" ? "bg-easy" : d === "medium" ? "bg-medium" : "bg-hard";
-  return <span className={`size-2 rounded-full shrink-0 ${cls}`} aria-hidden />;
+  return (
+    <span
+      data-difficulty-pill=""
+      className={`size-2 rounded-full shrink-0 ${cls} ${className}`}
+      aria-hidden
+    />
+  );
 }

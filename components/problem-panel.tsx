@@ -81,6 +81,7 @@ export function ProblemPanel({
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <span
+            data-difficulty-pill=""
             className={`inline-flex items-center h-[22px] px-2 rounded-md ${diffClass} text-[11.5px] font-medium`}
           >
             {diffLabel}
