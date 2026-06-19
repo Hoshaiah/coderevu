@@ -85,14 +85,18 @@ export function ProblemPanel({
           >
             {diffLabel}
           </span>
-          {tags.map((t) => (
-            <span
-              key={t}
-              className="inline-flex h-[22px] items-center px-2 rounded-md border border-rule bg-surface-2 text-[11.5px] font-mono text-fg-2"
-            >
-              {t}
+          {tags.length > 0 && (
+            <span data-tag-row="" className="contents">
+              {tags.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex h-[22px] items-center px-2 rounded-md border border-rule bg-surface-2 text-[11.5px] font-mono text-fg-2"
+                >
+                  {t}
+                </span>
+              ))}
             </span>
-          ))}
+          )}
         </div>
         <div className="mt-4">
           <StatusControl

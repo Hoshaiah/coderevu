@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { getOrCreateSessionId } from "@/lib/db/session";
-import { getProblemBySlug, problemId as makeProblemId } from "@/lib/db/problems";
+import {
+  getProblemBySlug,
+  listTrackProblems,
+  problemId as makeProblemId,
+} from "@/lib/db/problems";
 import { getProgress } from "@/lib/db/progress";
 import { getConversation } from "@/lib/db/conversations";
 import {
@@ -25,8 +29,23 @@ export default async function ProblemPage(
   const progress = await getProgress(sessionId, id);
   const conversation = await getConversation(sessionId, id);
 
+  // For the in-workspace nav (prev / next / shuffle / list modal).
+  // Sort to match the order shown on the track page.
+  const difficultyRank = { easy: 0, medium: 1, hard: 2 } as const;
+  const navProblems = listTrackProblems(track)
+    .slice()
+    .sort(
+      (a, b) =>
+        difficultyRank[a.difficulty] - difficultyRank[b.difficulty] ||
+        a.orderIndex - b.orderIndex,
+    )
+    .map((p) => ({ slug: p.slug, title: p.title, difficulty: p.difficulty }));
+
   return (
     <ProblemWorkspace
+      track={track}
+      problemSlug={problemSlug}
+      navProblems={navProblems}
       problemId={id}
       title={problem.title}
       difficulty={problem.difficulty}

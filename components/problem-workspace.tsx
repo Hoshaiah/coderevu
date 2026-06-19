@@ -12,7 +12,9 @@ import { toast } from "sonner";
 import { ProblemPanel } from "@/components/problem-panel";
 import { ChatPanel } from "@/components/chat-panel";
 import { ReferencePanel } from "@/components/reference-panel";
+import { ProblemNav, type NavProblem } from "@/components/problem-nav";
 import { setStatus as setStatusAction } from "@/app/actions/progress";
+import type { TrackId } from "@/lib/db/types";
 
 // Monaco is heavy. Keep it out of the initial bundle / server module graph
 // so dev-mode Turbopack doesn't blow its memory budget on every recompile.
@@ -35,6 +37,9 @@ type Message = { role: "user" | "assistant"; content: string };
 export type ProgressState = "todo" | "in-progress" | "complete";
 
 export function ProblemWorkspace({
+  track,
+  problemSlug,
+  navProblems,
   problemId,
   title,
   difficulty,
@@ -50,6 +55,9 @@ export function ProblemWorkspace({
   initialMessages,
   aiEnabled,
 }: {
+  track: TrackId;
+  problemSlug: string;
+  navProblems: NavProblem[];
   problemId: string;
   title: string;
   difficulty: "easy" | "medium" | "hard";
@@ -121,10 +129,12 @@ export function ProblemWorkspace({
   }, [tutorOpen]);
 
   return (
+    <div className="flex flex-col" style={{ height: "calc(100dvh - 3.5rem)" }}>
+      <ProblemNav track={track} problems={navProblems} currentSlug={problemSlug} />
     <PanelGroup
       direction="horizontal"
       autoSaveId="coderevu:workspace"
-      style={{ height: "calc(100dvh - 3.5rem)" }}
+      className="flex-1 min-h-0"
     >
       <Panel defaultSize={32} minSize={20} maxSize={55} className="flex min-w-0">
         {referenceExpanded ? (
@@ -196,6 +206,7 @@ export function ProblemWorkspace({
         />
       </Panel>
     </PanelGroup>
+    </div>
   );
 }
 

@@ -205,12 +205,9 @@
   height: 100%;
 }
 
-/* Track-list display preferences (controlled by components/track-prefs.tsx).
-   The client component sets data-prefs-* on <html>; rows opt in with their
-   own data-* attributes. CSS-only so server-rendered markup stays cacheable. */
+/* Problem-view display preferences (set by components/problem-nav.tsx).
+   The client component writes data-* attrs onto <html>; elements opt in
+   with their own data-* attrs. CSS-only so SSR markup stays cacheable. */
 html[data-prefs-tags="hidden"] [data-tag-row] {
-  display: none;
-}
-html[data-prefs-completed="hidden"] [data-problem-row][data-status="complete"] {
   display: none;
 }
