@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { saveDraft } from "@/app/actions/progress";
 import { StatusControl } from "@/components/status-control";
+import { CodeViewer } from "@/components/code-viewer";
 import type { ProgressState } from "@/components/problem-workspace";
 
 type Tab = "editor" | "original";
@@ -39,7 +40,16 @@ export function CodeEditor({
   onSetStatus: (s: ProgressState) => void;
   statusPending: boolean;
 }) {
-  const [value, setValue] = useState(initialCode);
+  // Monaco is the source of truth for the live draft. We mirror it in a
+  // ref for tab-switch and reset logic, and a state for UI bits that need
+  // to re-render (modified indicator, reset-button enablement).
+  //
+  // Important: we DO NOT pass `value` to <Editor>. Using `defaultValue`
+  // makes Monaco uncontrolled; React state updates per-keystroke don't
+  // round-trip through the editor's model. This avoids the cursor-jump
+  // bug that the controlled pattern causes when typing fast.
+  const draftRef = useRef<string>(initialCode);
+  const [draft, setDraft] = useState(initialCode);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("editor");
@@ -72,7 +82,7 @@ export function CodeEditor({
     }
   };
 
-  const modified = value !== originalCode;
+  const modified = draft !== originalCode;
 
   const persist = useCallback(
     async (code: string) => {
@@ -96,30 +106,32 @@ export function CodeEditor({
   }, []);
 
   function handleChange(next: string | undefined) {
-    if (tab !== "editor") return;
     const v = next ?? "";
-    setValue(v);
+    draftRef.current = v;
+    setDraft(v);
     onChange?.(v);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => void persist(v), 1200);
   }
 
   function requestReset() {
-    if (value === originalCode) return;
+    if (draftRef.current === originalCode) return;
     setResetOpen(true);
   }
 
   function confirmReset() {
     setResetOpen(false);
     setTab("editor");
-    setValue(originalCode);
+    // Imperatively reset the editor's content so the cursor and undo
+    // stack get cleanly replaced.
+    const ed = editorRef.current;
+    if (ed) ed.setValue(originalCode);
+    draftRef.current = originalCode;
+    setDraft(originalCode);
     onChange?.(originalCode);
     void persist(originalCode);
     toast.success("Reverted to original buggy code");
   }
-
-  const displayed = tab === "editor" ? value : originalCode;
-  const readOnly = tab === "original";
 
   return (
     <div className="flex flex-col h-full min-w-0">
@@ -196,7 +208,7 @@ export function CodeEditor({
             size="sm"
             variant="ghost"
             onClick={requestReset}
-            disabled={value === originalCode}
+            disabled={draft === originalCode}
             className="h-7 px-2 text-[12px] text-fg-2 hover:text-fg hover:bg-surface-3 disabled:opacity-40 disabled:hover:bg-transparent"
             title="Reset to original buggy code"
           >
@@ -212,28 +224,39 @@ export function CodeEditor({
         </div>
       )}
 
-      <div ref={editorHostRef} className="flex-1 min-h-[400px] min-w-0">
-        <Editor
-          value={displayed}
-          language={language}
-          onChange={handleChange}
-          onMount={handleEditorMount}
-          theme="vs-dark"
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
-            scrollBeyondLastLine: false,
-            padding: { top: 12, bottom: 12 },
-            automaticLayout: true,
-            tabSize: 2,
-            wordWrap: "on",
-            wrappingIndent: "indent",
-            readOnly,
-            renderLineHighlight: readOnly ? "none" : "line",
-            domReadOnly: readOnly,
-          }}
-        />
+      <div ref={editorHostRef} className="flex-1 min-h-[400px] min-w-0 relative">
+        {/* Always-mounted editable Monaco. Visibility is toggled rather than
+            remounting on tab switch so the draft, undo stack, and cursor
+            position survive intact. */}
+        <div className={tab === "editor" ? "absolute inset-0" : "absolute inset-0 invisible pointer-events-none"}>
+          <Editor
+            defaultValue={initialCode}
+            language={language}
+            onChange={handleChange}
+            onMount={handleEditorMount}
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              fontFamily: "var(--font-mono), ui-monospace, monospace",
+              scrollBeyondLastLine: false,
+              padding: { top: 12, bottom: 12 },
+              automaticLayout: true,
+              tabSize: 2,
+              wordWrap: "on",
+              wrappingIndent: "indent",
+              renderLineHighlight: "line",
+            }}
+          />
+        </div>
+
+        {/* "See original" overlay — a separate read-only viewer that doesn't
+            touch the editor's state. */}
+        {tab === "original" && (
+          <div className="absolute inset-0 bg-[#1e1e1e]">
+            <CodeViewer code={originalCode} language={language} height="100%" />
+          </div>
+        )}
       </div>
     </div>
   );
